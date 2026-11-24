@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../api.js';
 import Skull from './Skull.jsx';
 
@@ -41,7 +42,8 @@ export default function Updates() {
         {pending ? `✨ Update to v${state.version}` : s === 'downloading' ? `Updating… ${state.percent || 0}%` : 'Check for updates'}
       </button>
 
-      {open && (
+      {/* Rendered at the page level: the top bar's blur effect would otherwise trap the popup inside the bar. */}
+      {open && createPortal(
         <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
           <div className="modal update-modal" role="dialog" aria-label="Updates">
             <header className="editor__head">
@@ -103,7 +105,8 @@ export default function Updates() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
