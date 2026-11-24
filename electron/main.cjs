@@ -85,25 +85,12 @@ function registerIpc() {
       if (status === 'wanted') return existing;
       return store.save({ ...existing, status: 'owned', pricePaid: existing.pricePaid ?? existing.msrp });
     }
-    let item;
-    try {
-      item = await catalog.details(url);
-    } catch {
-      // Offline or the page failed: add it from the checklist info alone.
-      item = catalog.list().items.find((i) => i.url === url);
-      if (!item) throw new Error('That item is not in the catalog.');
-    }
+    // Saved instantly from the catalog list; photo and remaining details follow in the background.
+    const item = catalog.find(url);
+    if (!item) throw new Error('That item is not in the catalog.');
     const doll = store.save(catalog.dollFrom(item, status === 'wanted' ? 'wanted' : 'owned'));
-    try {
-      const file = await releases.downloadImage(item.image, app.getPath('temp'), catalog.politeFetch);
-      if (file) {
-        store.addPhotos(doll.id, [file]);
-        fs.rmSync(file, { force: true });
-      }
-    } catch {
-      /* the doll is still added without a photo */
-    }
-    return store.get(doll.id);
+    enrichLater(doll.id);
+    return doll;
   });
 
   ipcMain.handle('releases:cached', () => releases.cached());
@@ -137,6 +124,58 @@ function registerIpc() {
   });
 }
 
+// ---------- background details for dolls added from the catalog ----------
+// MHcollector asks for 3 seconds between requests, so the page + photo for each new doll
+// are fetched here, one doll at a time, without making you wait. Each doll updates on
+// screen as soon as its photo arrives.
+const enrichQueue = [];
+let enriching = false;
+
+function enrichLater(dollId) {
+  if (!enrichQueue.includes(dollId)) enrichQueue.push(dollId);
+  runEnrichment();
+}
+
+async function runEnrichment() {
+  if (enriching) return;
+  enriching = true;
+  try {
+    while (enrichQueue.length) {
+      const id = enrichQueue.shift();
+      try {
+        await enrichDoll(id);
+      } catch {
+        /* offline or page failed: it'll be retried the next time the app starts */
+      }
+    }
+  } finally {
+    enriching = false;
+  }
+}
+
+async function enrichDoll(id) {
+  const doll = store.get(id);
+  if (!doll?.catalogUrl) return;
+  const item = await catalog.details(doll.catalogUrl, 'low');
+  const blank = (v) => v === null || v === undefined || v === '';
+  const fresh = store.get(id); // you may have edited it meanwhile: only fill what's still blank
+  if (!fresh) return;
+  const next = { ...fresh };
+  const character = item.character && !/,/.test(item.character) ? item.character : null;
+  if (blank(next.character) && character) next.character = character;
+  if (blank(next.modelNumber) && item.modelNumber) next.modelNumber = item.modelNumber;
+  if (next.dollName && next.character && next.dollName === next.character) next.dollName = null;
+  if (JSON.stringify(next) !== JSON.stringify(fresh)) store.save(next);
+  if (!fresh.photos.length && item.image) {
+    const file = await releases.downloadImage(item.image, app.getPath('temp'), (u, init) => catalog.politeFetch(u, init, 'low'));
+    if (file) {
+      if (store.get(id)) store.addPhotos(id, [file]);
+      fs.rmSync(file, { force: true });
+    }
+  }
+  mainWindow?.webContents.send('dolls:changed');
+}
+
 // Character, line, year, generation, model number and MSRP for a Mattel Creations product.
 async function mattelInfo(url, launchAt) {
   try {
@@ -166,6 +205,8 @@ async function backfillDolls() {
       if (doll.status === 'wanted' && blank(next.targetPrice)) next.targetPrice = next.msrp;
       if (!blank(next.dollName) && /^Monster High /i.test(next.dollName)) next.dollName = next.dollName.replace(/^Monster High\s+/i, '').replace(/\s+Doll$/i, '');
     }
+    // Added from the catalog but its photo/details never arrived (app closed, offline): try again.
+    if (doll.catalogUrl && !doll.photos.length && blank(doll.modelNumber)) enrichLater(doll.id);
     if (doll.catalogUrl && blank(next.msrp)) {
       const item = catalog.find(doll.catalogUrl);
       const msrp = estimateMsrp(item);

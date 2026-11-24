@@ -43,7 +43,7 @@ Data lives in `%APPDATA%\My Ghoulection\` (`ghoulection.db`, `photos\`, `release
 
 ## How the Catalog works
 
-The app downloads MHcollector's public Checklist page (one request) and keeps the list in the local database, refreshing it weekly or when you press **Update catalog**. A doll's full details and photo are fetched only when you open or add it, then cached. All requests to mhcollector.com are spaced at least 3 seconds apart, as its robots.txt asks, so adding a doll takes a few seconds. Catalog data and photos belong to MHcollector.com; each entry links back to its page there.
+The app downloads MHcollector's public Checklist page (one request) and keeps the list in the local database, refreshing it weekly or when you press **Update catalog**. A doll's full details and photo are fetched only when you open or add it, then cached. All requests to mhcollector.com are spaced at least 3 seconds apart, as its robots.txt asks, so a doll you add appears instantly and its photo and model number fill in a few seconds later, in the background. Catalog data and photos belong to MHcollector.com; each entry links back to its page there.
 
 ## How Coming Soon works
 

@@ -264,6 +264,7 @@ export default function App() {
         <DollEditor
           key={editing.id ?? 'new'}
           doll={editing}
+          latest={editing.id ? dolls.find((d) => d.id === editing.id) : undefined}
           onClose={() => setEditing(null)}
           onChanged={upsert}
           onDeleted={(id) => setDolls((list) => list.filter((d) => d.id !== id))}

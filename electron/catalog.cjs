@@ -8,6 +8,10 @@
 //   mhcollector.com goes through one queue that enforces that gap.
 const { net } = require('electron');
 const { guessGeneration, estimateMsrp } = require('./details.cjs');
+const vocab = require('./vocab.json');
+
+const plain = (s) => String(s || '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const characterIn = (name) => vocab.characters.find((c) => ` ${plain(name)} `.includes(` ${plain(c)} `)) || null;
 
 const SITE = 'https://mhcollector.com';
 const CHECKLIST = `${SITE}/checklist/`;
@@ -17,24 +21,39 @@ const CRAWL_DELAY_MS = 3000;
 const FLAG_NAMES = { E: 'Exclusive', B: 'Budget', F: 'Fashion pack', R: 'Reissue' };
 
 // ---------- polite fetching ----------
+// One request at a time, CRAWL_DELAY_MS apart. Two lanes: 'high' for things you're
+// waiting on (a details popup), 'low' for background work (photos for dolls you added).
+// The high lane always goes first.
 let lastRequest = 0;
-let queue = Promise.resolve();
+let pumping = false;
+const lanes = { high: [], low: [] };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function politeFetch(url, init = {}) {
-  const run = async () => {
-    const wait = lastRequest + CRAWL_DELAY_MS - Date.now();
-    if (wait > 0) await sleep(wait);
-    lastRequest = Date.now();
-    return net.fetch(url, { ...init, headers: { 'User-Agent': UA, ...(init.headers || {}) } });
-  };
-  const p = queue.then(run, run);
-  queue = p.catch(() => {});
-  return p;
+function politeFetch(url, init = {}, priority = 'high') {
+  return new Promise((resolve, reject) => {
+    lanes[priority === 'low' ? 'low' : 'high'].push({ url, init, resolve, reject });
+    pump();
+  });
 }
 
-async function getHtml(url) {
-  const res = await politeFetch(url);
+async function pump() {
+  if (pumping) return;
+  pumping = true;
+  try {
+    while (lanes.high.length || lanes.low.length) {
+      const wait = lastRequest + CRAWL_DELAY_MS - Date.now();
+      if (wait > 0) await sleep(wait);
+      const job = lanes.high.shift() || lanes.low.shift(); // picked after the wait, so new urgent requests jump ahead
+      lastRequest = Date.now();
+      net.fetch(job.url, { ...job.init, headers: { 'User-Agent': UA, ...(job.init.headers || {}) } }).then(job.resolve, job.reject);
+    }
+  } finally {
+    pumping = false;
+  }
+}
+
+async function getHtml(url, priority = 'high') {
+  const res = await politeFetch(url, {}, priority);
   if (!res.ok) throw new Error(`MHcollector answered ${res.status}`);
   return res.text();
 }
@@ -157,11 +176,11 @@ function createCatalog(db) {
     return list();
   }
 
-  async function details(url) {
+  async function details(url, priority = 'high') {
     const row = db.prepare('SELECT * FROM catalog WHERE url = ?').get(url);
     if (!row) throw new Error('That item is not in the catalog.');
     if (row.details_at) return toItem(row);
-    const d = parseDetails(await getHtml(url));
+    const d = parseDetails(await getHtml(url, priority));
     db.prepare(`UPDATE catalog SET character = ?, gender = ?, model_number = ?, image = ?, description = ?, details_at = datetime('now') WHERE url = ?`)
       .run(d.character, d.gender, d.modelNumber, d.image, d.description, url);
     return toItem(db.prepare('SELECT * FROM catalog WHERE url = ?').get(url));
@@ -169,7 +188,8 @@ function createCatalog(db) {
 
   // Builds a new doll record from a catalog entry (photo handled by the caller).
   function dollFrom(item, status) {
-    const character = item.character && !/,/.test(item.character) ? item.character : null;
+    // Before the full details arrive, most catalog names already contain the character.
+    const character = item.character && !/,/.test(item.character) ? item.character : characterIn(item.name);
     const descLine = item.flags.length ? `${item.flags.map((f) => FLAG_NAMES[f]).join(', ')}.` : '';
     const msrp = estimateMsrp(item);
     return {

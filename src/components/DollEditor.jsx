@@ -21,13 +21,30 @@ const fromDoll = (doll) => {
 
 const comparable = (f) => JSON.stringify({ ...f, photos: undefined });
 
-export default function DollEditor({ doll, onClose, onChanged, onDeleted, notify }) {
+export default function DollEditor({ doll, latest, onClose, onChanged, onDeleted, notify }) {
   const [form, setForm] = useState(() => fromDoll(doll));
   const [saved, setSaved] = useState(() => comparable(fromDoll(doll)));
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef(null);
   const firstField = useRef(null);
+
+  // Details or a photo can arrive in the background while this is open (dolls just added
+  // from the catalog). Take the newest values for every field you haven't changed yourself.
+  useEffect(() => {
+    if (!latest || latest.id !== form.id) return;
+    const incoming = fromDoll(latest);
+    const base = JSON.parse(saved);
+    setForm((f) => {
+      const next = { ...f, photos: latest.photos };
+      for (const k of Object.keys(BLANK)) {
+        if (k !== 'photos' && JSON.stringify(f[k]) === JSON.stringify(base[k])) next[k] = incoming[k];
+      }
+      return next;
+    });
+    setSaved(comparable(incoming));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latest]);
 
   const dirty = comparable(form) !== saved;
   const wanted = form.status === 'wanted';
