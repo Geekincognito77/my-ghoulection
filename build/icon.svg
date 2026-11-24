@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="25%" r="85%">
+      <stop offset="0" stop-color="#3a1f52"/>
+      <stop offset="0.6" stop-color="#1f1330"/>
+      <stop offset="1" stop-color="#120a1c"/>
+    </radialGradient>
+    <linearGradient id="bow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff7cc3"/>
+      <stop offset="1" stop-color="#e0249a"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bg)"/>
+  <rect x="40" y="40" width="432" height="432" rx="88" fill="none" stroke="#ff3fa4" stroke-width="7" stroke-dasharray="22 16" opacity="0.8"/>
+  <g filter="url(#glow)">
+    <!-- skull -->
+    <path d="M256 104c-86 0-148 58-148 138 0 44 21 80 52 102v42c0 14 10 24 24 24h144c14 0 24-10 24-24v-42c31-22 52-58 52-102 0-80-62-138-148-138z" fill="#f8f0ff"/>
+    <ellipse cx="198" cy="250" rx="38" ry="42" fill="#1a0f26"/>
+    <ellipse cx="314" cy="250" rx="38" ry="42" fill="#1a0f26"/>
+    <circle cx="208" cy="240" r="9" fill="#35e0c3"/>
+    <circle cx="324" cy="240" r="9" fill="#35e0c3"/>
+    <path d="M256 296l-20 34h40z" fill="#1a0f26"/>
+    <path d="M212 360v44M256 360v44M300 360v44" stroke="#1a0f26" stroke-width="12" stroke-linecap="round"/>
+    <!-- stitches across the forehead -->
+    <path d="M190 158l132 -8" stroke="#1a0f26" stroke-width="7" stroke-linecap="round"/>
+    <path d="M208 146l4 24M240 144l3 24M272 142l3 24M304 140l3 24" stroke="#1a0f26" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <!-- bow -->
+  <g transform="translate(340 122) rotate(18)">
+    <path d="M0 0L-72 -44Q-86 0 -72 44Z" fill="url(#bow)"/>
+    <path d="M0 0L72 -44Q86 0 72 44Z" fill="url(#bow)"/>
+    <circle r="20" fill="#ff3fa4" stroke="#ffd0ea" stroke-width="4"/>
+  </g>
+</svg>
