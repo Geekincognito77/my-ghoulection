@@ -6,6 +6,7 @@ const { openStore } = require('./store.cjs');
 const { createReleaseService } = require('./releases.cjs');
 const { createCatalog } = require('./catalog.cjs');
 const { setupUpdates } = require('./updates.cjs');
+const { fromMattelProduct, estimateMsrp } = require('./details.cjs');
 
 // ghoul://photo/<filename> serves pictures from the local photos folder.
 protocol.registerSchemesAsPrivileged([
@@ -80,7 +81,10 @@ function registerIpc() {
   ipcMain.handle('catalog:details', (_e, url) => catalog.details(url));
   ipcMain.handle('catalog:add', async (_e, url, status) => {
     const existing = store.list().find((d) => d.catalogUrl === url);
-    if (existing) return store.save({ ...existing, status: status === 'wanted' ? existing.status : 'owned' });
+    if (existing) {
+      if (status === 'wanted') return existing;
+      return store.save({ ...existing, status: 'owned', pricePaid: existing.pricePaid ?? existing.msrp });
+    }
     let item;
     try {
       item = await catalog.details(url);
@@ -105,10 +109,17 @@ function registerIpc() {
   ipcMain.handle('releases:cached', () => releases.cached());
   ipcMain.handle('releases:check', () => releases.check());
   ipcMain.handle('releases:wishlist', async (_e, item) => {
+    const already = store.list().find((d) => (d.notes || '').includes(item.url));
+    if (already) return already;
+    const info = await mattelInfo(item.url, item.launchAt);
+    const msrp = info.msrp ?? item.price ?? null;
     const doll = store.save({
       status: 'wanted',
-      dollName: item.title,
-      targetPrice: item.price,
+      dollName: item.title.replace(/^Monster High\s+/i, '').replace(/\s+Doll$/i, ''),
+      ...info,
+      msrp,
+      msrpEstimated: false,
+      targetPrice: msrp,
       priority: 'High',
       notes: `Mattel Creations: ${item.url}${item.launchAt ? `\nDrops ${new Date(item.launchAt).toLocaleString()}` : ''}`,
       extras: [],
@@ -124,6 +135,50 @@ function registerIpc() {
     }
     return store.get(doll.id);
   });
+}
+
+// Character, line, year, generation, model number and MSRP for a Mattel Creations product.
+async function mattelInfo(url, launchAt) {
+  try {
+    const product = await releases.fetchProduct(url);
+    if (!product) return {};
+    const info = fromMattelProduct(product, { launchAt, catalogItems: catalog.list().items });
+    // Don't link to an MHcollector entry that another doll already uses.
+    if (info.catalogUrl && store.list().some((d) => d.catalogUrl === info.catalogUrl)) delete info.catalogUrl;
+    return info;
+  } catch {
+    return {};
+  }
+}
+
+// Brings dolls saved by earlier versions up to date: fills in Mattel details and MSRP,
+// and sets price paid to the MSRP where it's still blank. Never overwrites what you entered.
+async function backfillDolls() {
+  let changed = 0;
+  const blank = (v) => v === null || v === undefined || v === '';
+  for (const doll of store.list()) {
+    const next = { ...doll };
+    const mattelUrl = (/https:\/\/creations\.mattel\.com\/products\/[^\s]+/.exec(doll.notes || '') || [])[0];
+    if (mattelUrl && blank(doll.modelNumber)) {
+      const info = await mattelInfo(mattelUrl, null);
+      for (const [k, v] of Object.entries(info)) if (blank(next[k]) && !blank(v)) next[k] = v;
+      if (!blank(info.msrp) && blank(doll.msrp)) next.msrpEstimated = false;
+      if (doll.status === 'wanted' && blank(next.targetPrice)) next.targetPrice = next.msrp;
+      if (!blank(next.dollName) && /^Monster High /i.test(next.dollName)) next.dollName = next.dollName.replace(/^Monster High\s+/i, '').replace(/\s+Doll$/i, '');
+    }
+    if (doll.catalogUrl && blank(next.msrp)) {
+      const item = catalog.find(doll.catalogUrl);
+      const msrp = estimateMsrp(item);
+      if (msrp != null) Object.assign(next, { msrp, msrpEstimated: true });
+    }
+    if (next.status === 'owned' && blank(next.pricePaid) && !blank(next.msrp)) next.pricePaid = next.msrp;
+    if (JSON.stringify(next) !== JSON.stringify(doll)) {
+      store.save(next);
+      changed++;
+    }
+  }
+  if (changed) mainWindow?.webContents.send('dolls:changed');
+  return changed;
 }
 
 app.whenReady().then(() => {
@@ -142,7 +197,10 @@ app.whenReady().then(() => {
   const updates = setupUpdates(() => mainWindow);
   createWindow();
   // Quietly look for a new version shortly after launch.
-  mainWindow.webContents.once('did-finish-load', () => setTimeout(() => updates.checkQuietly(), 5000));
+  mainWindow.webContents.once('did-finish-load', () => {
+    setTimeout(() => updates.checkQuietly(), 5000);
+    backfillDolls().catch(() => {});
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

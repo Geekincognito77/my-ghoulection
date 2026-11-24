@@ -27,10 +27,16 @@ const FIELDS = [
   ['targetPrice', 'target_price', 'num'],
   ['priority', 'priority', 'text'],
   ['catalogUrl', 'catalog_url', 'text'], // link to the MHcollector catalog entry, if added from there
+  ['msrp', 'msrp', 'num'], // original retail price
+  ['msrpEstimated', 'msrp_estimated', 'bool'], // true when msrp is a typical price, not the real one
+  ['valueCheckedAt', 'value_checked_at', 'text'], // when the estimated value was last checked
 ];
+
+const SQL_TYPES = { text: 'TEXT', int: 'INTEGER', num: 'REAL', json: "TEXT NOT NULL DEFAULT '[]'", bool: 'INTEGER NOT NULL DEFAULT 0' };
 
 function toDb(kind, value) {
   if (kind === 'json') return JSON.stringify(Array.isArray(value) ? value : []);
+  if (kind === 'bool') return value ? 1 : 0;
   if (value === undefined || value === null || value === '') return null;
   if (kind === 'int') {
     const n = parseInt(value, 10);
@@ -73,12 +79,14 @@ function openStore(dataDir) {
   `);
   // Upgrades for databases made by earlier versions.
   const dollCols = new Set(db.prepare('PRAGMA table_info(dolls)').all().map((c) => c.name));
-  if (!dollCols.has('catalog_url')) db.exec('ALTER TABLE dolls ADD COLUMN catalog_url TEXT');
+  for (const [, col, kind] of FIELDS) {
+    if (!dollCols.has(col)) db.exec(`ALTER TABLE dolls ADD COLUMN ${col} ${SQL_TYPES[kind]}`);
+  }
 
   function rowToDoll(row, photos) {
     const doll = { id: row.id, createdAt: row.created_at, updatedAt: row.updated_at };
     for (const [field, col, kind] of FIELDS) {
-      doll[field] = kind === 'json' ? safeJson(row[col]) : row[col];
+      doll[field] = kind === 'json' ? safeJson(row[col]) : kind === 'bool' ? !!row[col] : row[col];
     }
     doll.photos = photos;
     return doll;

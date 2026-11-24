@@ -1,22 +1,9 @@
 // Suggestions only: every field also accepts anything you type.
+// The lists are shared with the desktop side (electron/vocab.json), which uses them to read Mattel titles.
+import vocab from '../electron/vocab.json';
 
-export const CHARACTERS = [
-  'Abbey Bominable', 'Catty Noir', 'Clawd Wolf', 'Clawdeen Wolf', 'Clawdia Wolf', 'Cleo de Nile',
-  'Deuce Gorgon', 'Draculaura', 'Elissabat', 'Frankie Stein', 'Ghoulia Yelps', 'Gigi Grant',
-  'Gil Webber', 'Heath Burns', 'Holt Hyde', 'Honey Swamp', 'Howleen Wolf', 'Invisi Billy',
-  'Iris Clops', 'Jackson Jekyll', 'Jinafire Long', 'Lagoona Blue', 'Manny Taur', 'Moanica D’Kay',
-  'Nefera de Nile', 'Neighthan Rot', 'Operetta', 'Robecca Steam', 'Rochelle Goyle', 'Scarah Screams',
-  'Skelita Calaveras', 'Spectra Vondergeist', 'Toralei Stripe', 'Twyla', 'Venus McFlytrap',
-  'Viperine Gorgon', 'Wydowna Spider',
-];
-
-export const LINES = [
-  'Basic (First Wave)', 'School’s Out', 'Dead Tired', 'Dawn of the Dance', 'Gloom Beach',
-  'Sweet 1600', 'Ghouls Rule', 'Scaris: City of Frights', '13 Wishes', 'Freaky Fusion',
-  'Frights, Camera, Action!', 'Boo York, Boo York', 'Welcome to Monster High', 'Haunt Couture',
-  'Skulltimate Secrets', 'Creepover Party', 'Monster Ball', 'Day Out', 'Fang Vote', 'Reproduction',
-  'Mattel Creations Exclusive', 'SDCC Exclusive',
-];
+export const CHARACTERS = vocab.characters;
+export const LINES = vocab.lines;
 
 export const GENERATIONS = ['G1', 'G2', 'G3', 'Collector', 'Other'];
 

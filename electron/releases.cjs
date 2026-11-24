@@ -139,6 +139,12 @@ function createReleaseService(dataDir) {
       fs.writeFileSync(cacheFile, JSON.stringify(result, null, 2));
       return result;
     },
+    // Full product data for one Mattel Creations product page URL.
+    async fetchProduct(url) {
+      const m = /^https:\/\/creations\.mattel\.com\/products\/([a-z0-9-]+)/i.exec(url || '');
+      if (!m) return null;
+      return JSON.parse(await getText(`${SITE}/products/${m[1]}.json`)).product || null;
+    },
     async downloadImage(url, destDir, fetcher = net.fetch) {
       if (!url || !/^https:\/\/([a-z0-9-]+\.)*(shopify\.com|mattel\.com|mhcollector\.com)\//i.test(url)) return null;
       const res = await fetcher(url, { headers: { 'User-Agent': UA } });

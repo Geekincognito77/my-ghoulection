@@ -6,6 +6,7 @@ import DollEditor from './components/DollEditor.jsx';
 import ComingSoon from './components/ComingSoon.jsx';
 import Catalog from './components/Catalog.jsx';
 import Updates from './components/Updates.jsx';
+import ValueCheck from './components/ValueCheck.jsx';
 import Skull from './components/Skull.jsx';
 
 const STALE_MS = 3 * 60 * 60 * 1000; // re-check Mattel Creations after 3 hours
@@ -29,6 +30,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   // The catalog stays mounted once opened, so its filters survive switching tabs.
   const [catalogSeen, setCatalogSeen] = useState(false);
+  const [valueCheck, setValueCheck] = useState(false);
   useEffect(() => { if (tab === 'catalog') setCatalogSeen(true); }, [tab]);
 
   const [releases, setReleases] = useState(null);
@@ -46,7 +48,10 @@ export default function App() {
   }, [toast]);
 
   useEffect(() => {
-    api.listDolls().then((list) => { setDolls(list); setLoaded(true); });
+    const load = () => api.listDolls().then((list) => { setDolls(list); setLoaded(true); });
+    load();
+    // The desktop side may fill in details for older entries after launch.
+    return api.onDollsChanged(load);
   }, []);
 
   const checkReleases = useCallback(async () => {
@@ -191,7 +196,7 @@ export default function App() {
                 <Stat label="Ghouls" value={owned.length} />
                 <Stat label="Boxed (NRFB / NIB)" value={stats.boxed} />
                 <Stat label="Total paid" value={fmtMoney(stats.paid)} />
-                <Stat label="Estimated value" value={fmtMoney(stats.value)} accent />
+                <Stat label="Estimated value" value={fmtMoney(stats.value)} accent onClick={() => setValueCheck(true)} hint="Check eBay sold prices ›" />
                 <Stat label={stats.gain >= 0 ? 'Value gained' : 'Value lost'} value={fmtMoney(Math.abs(stats.gain))} tone={stats.gain >= 0 ? 'up' : 'down'} />
               </>
             ) : (
@@ -266,16 +271,27 @@ export default function App() {
         />
       )}
 
+      {valueCheck && (
+        <ValueCheck
+          dolls={owned}
+          onClose={() => setValueCheck(false)}
+          onSaved={upsert}
+          onOpenDoll={(d) => { setValueCheck(false); setEditing(d); }}
+        />
+      )}
+
       {toast && <div key={toast.key} className={`toast ${toast.isError ? 'error' : ''}`} role="status">{toast.text}</div>}
     </div>
   );
 }
 
-function Stat({ label, value, accent, tone }) {
+function Stat({ label, value, accent, tone, onClick, hint }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className={`stat ${accent ? 'accent' : ''} ${tone || ''}`}>
+    <Tag className={`stat ${accent ? 'accent' : ''} ${tone || ''} ${onClick ? 'clickable' : ''}`} onClick={onClick}>
       <span className="stat__value">{value}</span>
       <span className="stat__label">{label}</span>
-    </div>
+      {hint && <span className="stat__hint">{hint}</span>}
+    </Tag>
   );
 }

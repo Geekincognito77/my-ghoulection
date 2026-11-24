@@ -263,6 +263,40 @@ label input, label select { color: var(--text); font-weight: 400; font-size: 15p
 .catalog-detail__info dd { margin: 0; }
 .catalog-detail .desc { color: var(--text); opacity: 0.9; font-size: 14px; }
 
+/* ---------- Value check ---------- */
+button.stat { text-align: left; font: inherit; color: inherit; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; }
+button.stat:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--pink), 0 8px 20px rgba(255, 63, 164, 0.2); }
+.stat__hint { font-size: 12px; font-weight: 700; color: var(--teal); margin-top: 2px; }
+.stat__value.up { color: var(--teal); }
+.stat__value.down { color: var(--danger); }
+.est-tag { color: #ffc46b; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; cursor: help; }
+.ebay-cell { display: flex; align-items: flex-end; }
+.ebay-cell .btn { width: 100%; padding: 10px 12px; }
+
+.value-check { width: min(980px, 100%); }
+.vc-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 16px 20px 0; }
+.vc-summary > div { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; }
+.vc-summary .stat__value { font-size: 20px; }
+.vc-help { padding: 12px 20px; font-size: 13px; }
+.vc-list { list-style: none; margin: 0; padding: 0 20px 20px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.vc-row { display: grid; grid-template-columns: 56px 1fr 80px auto 150px; gap: 14px; align-items: center; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.vc-thumb { width: 56px; height: 70px; border-radius: 8px; overflow: hidden; background: #f7f2fa; border: 0; padding: 0; cursor: pointer; display: grid; place-items: center; }
+.vc-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.vc-thumb .skull { width: 60%; color: #ccc; }
+.vc-name { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.vc-name .muted { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vc-name .badges { align-items: center; }
+.vc-paid { display: flex; flex-direction: column; }
+.vc-value { display: flex; flex-direction: column; gap: 2px; }
+.vc-value input { padding: 6px 10px; }
+.link-btn { background: none; border: 0; padding: 0; font-weight: 800; font-size: 15px; text-align: left; cursor: pointer; color: var(--text); }
+.link-btn:hover { color: var(--pink-2); text-decoration: underline; }
+.small { font-size: 12px; }
+.vc-cond { width: auto; padding: 2px 8px; font-size: 12px; font-weight: 700; border-radius: 999px; }
+.vc-cond.warn { color: #ffc46b; border-color: rgba(255, 196, 107, 0.6); }
+.badge.warn { color: #ffc46b; border-color: rgba(255, 196, 107, 0.45); }
+.warn-text { color: #ffc46b; }
+
 /* ---------- Updates ---------- */
 .btn.update-ready { border-color: var(--teal); color: var(--teal); animation: pulse 2s infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(53, 224, 195, 0.18); } }

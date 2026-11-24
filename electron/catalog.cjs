@@ -7,7 +7,7 @@
 // - The site's robots.txt asks for 3 seconds between requests, so every request to
 //   mhcollector.com goes through one queue that enforces that gap.
 const { net } = require('electron');
-const fs = require('node:fs');
+const { guessGeneration, estimateMsrp } = require('./details.cjs');
 
 const SITE = 'https://mhcollector.com';
 const CHECKLIST = `${SITE}/checklist/`;
@@ -104,16 +104,6 @@ function parseDetails(html) {
   return out;
 }
 
-// ---------- generation guess (editable afterwards) ----------
-function guessGeneration(item) {
-  const s = `${item.series || ''} ${item.name || ''}`.toLowerCase();
-  if (/skullector|haunt couture|collector|signature|comic[- ]con|sdcc|reproduction/.test(s)) return 'Collector';
-  if (!item.year) return null;
-  if (item.year <= 2015) return 'G1';
-  if (item.year <= 2019) return 'G2';
-  if (item.year >= 2022) return 'G3';
-  return null;
-}
 
 function createCatalog(db) {
   db.exec(`
@@ -181,8 +171,12 @@ function createCatalog(db) {
   function dollFrom(item, status) {
     const character = item.character && !/,/.test(item.character) ? item.character : null;
     const descLine = item.flags.length ? `${item.flags.map((f) => FLAG_NAMES[f]).join(', ')}.` : '';
+    const msrp = estimateMsrp(item);
     return {
       status,
+      msrp,
+      msrpEstimated: msrp != null,
+      pricePaid: status === 'owned' ? msrp : null,
       character,
       dollName: item.name !== character ? item.name : null,
       line: item.series,
@@ -196,7 +190,12 @@ function createCatalog(db) {
     };
   }
 
-  return { list, refresh, details, dollFrom, politeFetch };
+  function find(url) {
+    const row = db.prepare('SELECT * FROM catalog WHERE url = ?').get(url);
+    return row ? toItem(row) : null;
+  }
+
+  return { list, find, refresh, details, dollFrom, politeFetch };
 }
 
-module.exports = { createCatalog, parseChecklist, parseDetails };
+module.exports = { createCatalog, parseChecklist, parseDetails, FLAG_NAMES };

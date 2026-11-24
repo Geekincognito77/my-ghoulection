@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { CHARACTERS, CONDITIONS, EXTRAS, GENERATIONS, LINES, PRIORITIES, displayName } from '../constants.js';
 import Skull from './Skull.jsx';
+import { ebaySoldUrl } from './ValueCheck.jsx';
 
 const BLANK = {
   status: 'owned', character: '', dollName: '', line: '', year: '', generation: '', modelNumber: '',
   condition: '', extras: [], notes: '', pricePaid: '', purchasedFrom: '', purchaseDate: '',
-  estValue: '', targetPrice: '', priority: '', catalogUrl: '', photos: [],
+  estValue: '', targetPrice: '', priority: '', catalogUrl: '', msrp: '', msrpEstimated: false, valueCheckedAt: '', photos: [],
 };
+
+const isBlank = (v) => v === '' || v === null || v === undefined;
 
 const fromDoll = (doll) => {
   const form = { ...BLANK };
@@ -29,6 +32,17 @@ export default function DollEditor({ doll, onClose, onChanged, onDeleted, notify
   const dirty = comparable(form) !== saved;
   const wanted = form.status === 'wanted';
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  // Typing your own MSRP replaces the typical-price estimate.
+  const setMsrp = (e) => setForm((f) => ({ ...f, msrp: e.target.value, msrpEstimated: false }));
+  // Moving a doll into the collection defaults "price paid" to its MSRP.
+  const setStatus = (status) =>
+    setForm((f) => ({ ...f, status, pricePaid: status === 'owned' && isBlank(f.pricePaid) && !isBlank(f.msrp) ? f.msrp : f.pricePaid }));
+  const msrpField = (
+    <label>
+      <span>Retail price (MSRP){form.msrpEstimated && !isBlank(form.msrp) && <span className="est-tag" title="A typical price for this kind of release, not the official MSRP. Type over it if you know the real one."> estimate</span>}</span>
+      <input inputMode="decimal" value={form.msrp} onChange={setMsrp} placeholder="$" />
+    </label>
+  );
 
   useEffect(() => firstField.current?.focus(), []);
 
@@ -109,10 +123,10 @@ export default function DollEditor({ doll, onClose, onChanged, onDeleted, notify
         <header className="editor__head">
           <h2>{form.id ? displayName(form) : 'New ghoul'}</h2>
           <div className="segmented" role="radiogroup" aria-label="Status">
-            <button type="button" role="radio" aria-checked={!wanted} className={!wanted ? 'on' : ''} onClick={() => setForm((f) => ({ ...f, status: 'owned' }))}>
+            <button type="button" role="radio" aria-checked={!wanted} className={!wanted ? 'on' : ''} onClick={() => setStatus('owned')}>
               In my collection
             </button>
-            <button type="button" role="radio" aria-checked={wanted} className={wanted ? 'on' : ''} onClick={() => setForm((f) => ({ ...f, status: 'wanted' }))}>
+            <button type="button" role="radio" aria-checked={wanted} className={wanted ? 'on' : ''} onClick={() => setStatus('wanted')}>
               On my wishlist
             </button>
           </div>
@@ -183,6 +197,7 @@ export default function DollEditor({ doll, onClose, onChanged, onDeleted, notify
                     </select>
                   </label>
                   <label>Hoping to pay<input inputMode="decimal" value={form.targetPrice} onChange={set('targetPrice')} placeholder="$" /></label>
+                  {msrpField}
                 </div>
               </fieldset>
             ) : (
@@ -207,8 +222,12 @@ export default function DollEditor({ doll, onClose, onChanged, onDeleted, notify
                 <fieldset>
                   <legend>Value</legend>
                   <div className="grid-2">
+                    {msrpField}
                     <label>Price paid<input inputMode="decimal" value={form.pricePaid} onChange={set('pricePaid')} placeholder="$" /></label>
                     <label>Estimated value now<input inputMode="decimal" value={form.estValue} onChange={set('estValue')} placeholder="$" /></label>
+                    <div className="ebay-cell">
+                      <a className="btn ghost small" href={ebaySoldUrl(form)} target="_blank" rel="noreferrer">Check eBay sold prices &#8599;</a>
+                    </div>
                     <label>Bought from<input value={form.purchasedFrom} onChange={set('purchasedFrom')} placeholder="e.g. Target, eBay, convention" /></label>
                     <label>Date bought<input type="date" value={form.purchaseDate} onChange={set('purchaseDate')} /></label>
                   </div>

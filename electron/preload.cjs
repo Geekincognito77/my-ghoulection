@@ -15,6 +15,11 @@ contextBridge.exposeInMainWorld('ghoul', {
   catalogRefresh: () => ipcRenderer.invoke('catalog:refresh'),
   catalogDetails: (url) => ipcRenderer.invoke('catalog:details', url),
   catalogAdd: (url, status) => ipcRenderer.invoke('catalog:add', url, status),
+  onDollsChanged: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('dolls:changed', handler);
+    return () => ipcRenderer.removeListener('dolls:changed', handler);
+  },
   appVersion: () => ipcRenderer.invoke('app:version'),
   updateState: () => ipcRenderer.invoke('updates:state'),
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),

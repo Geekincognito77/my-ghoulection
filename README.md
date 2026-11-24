@@ -5,6 +5,8 @@ A Windows desktop app for cataloging a Monster High doll collection.
 - **Collection**: character, release, line, year, generation, SKU, condition, included extras, photos, price paid, where/when bought, estimated value, and totals.
 - **Wishlist**: dolls you're hunting, with priority and a target price.
 - **Catalog**: every Monster High release (about 830 dolls, plus fashion packs, playsets and figures), grouped by series, from [MHcollector.com](https://mhcollector.com/). Search and filter it, see what you're missing, and add any doll to your collection or wishlist with one click (it fills in character, series, year, model number, generation and a photo).
+- **Retail price (MSRP)**: every doll keeps its MSRP, and "price paid" defaults to it. Mattel Creations releases use the real price; catalog dolls use a typical retail price for that kind of release (basic, budget, fashion pack, multi-pack, playset, collector), labelled *estimate* until you type the real one.
+- **Value check**: click the *Estimated value* card to work through your collection. Each doll gets an **eBay sold** button that opens recently sold listings for that doll, filtered by its condition (New for NRFB/NIB, Used for loose). Type the typical price and the totals update. (eBay doesn't allow apps to read sold listings, so you read them and the app does the rest.)
 - **Coming Soon**: checks Mattel Creations for upcoming Monster High drops, with live countdowns, a desktop notification when a drop goes live, and one-click "add to wishlist".
 - **Export** to a CSV spreadsheet; **Data folder** opens where the database and photos live (back this folder up).
 
